@@ -36,6 +36,9 @@ class Macsio(CMakePackage):
     version('1.0', '90e8e00ea84af2a47bee387ad331dbde')
     version('develop', git='https://github.com/LLNL/MACSio.git',
             branch='master')
+    ## FOR NOW:
+    version('brad', git='https://github.com/BradWhitlock/MACSio.git',
+            branch='master')
 
     variant('mpi', default=True, description="Build MPI plugin")
     variant('silo', default=True, description="Build with SILO plugin")
@@ -48,6 +51,7 @@ class Macsio(CMakePackage):
     variant('exodus', default=False, description="Build EXODUS plugin")
     variant('scr', default=False, description="Build with SCR support")
     variant('typhonio', default=False, description="Build TYPHONIO plugin")
+    variant('conduit', default=False, description="Build CONDUIT plugin")
 
     depends_on('json-cwx')
     depends_on('mpi', when="+mpi")
@@ -59,6 +63,7 @@ class Macsio(CMakePackage):
     depends_on('silo', when="+pdb")
     depends_on('typhonio', when="+typhonio")
     depends_on('scr', when="+scr")
+    depends_on('conduit', when="+conduit")
 
     def cmake_args(self):
         spec = self.spec
@@ -89,16 +94,17 @@ class Macsio(CMakePackage):
             #     cmake_args.append("-DENABLE_HDF5_ZFP")
             #     cmake_args.append("-DWITH_ZFP_PREFIX={0}"
             #         .format(spec['silo'].prefix))
-            # SZIP is an hdf5 spack variant
-            # if "+szip" in spec:
-            #     cmake_args.append("-DENABLE_HDF5_SZIP")
-            #     cmake_args.append("-DWITH_SZIP_PREFIX={0}"
-            #         .format(spec['SZIP'].prefix))
-            # ZLIB is on by default, @1.1.2
-            # if "+zlib" in spec:
-            #     cmake_args.append("-DENABLE_HDF5_ZLIB")
-            #     cmake_args.append("-DWITH_ZLIB_PREFIX={0}"
-            #         .format(spec['silo'].prefix))
+        # SZIP is an hdf5 spack variant
+        if "+szip" in spec:
+            cmake_args.append("-DENABLE_HDF5_SZIP")
+            cmake_args.append("-DWITH_SZIP_PREFIX={0}"
+                 .format(spec['SZIP'].prefix))
+
+        # ZLIB is on by default, @1.1.2
+        if "+zlib" in spec:
+            cmake_args.append("-DENABLE_HDF5_ZLIB")
+            cmake_args.append("-DWITH_ZLIB_PREFIX={0}"
+                 .format(spec['silo'].prefix))
 
         if "+typhonio" in spec:
             cmake_args.append("-DENABLE_TYPHONIO_PLUGIN=ON")
@@ -112,5 +118,10 @@ class Macsio(CMakePackage):
             # exodus requires netcdf
             cmake_args.append("-DWITH_NETCDF_PREFIX={0}"
                               .format(spec['netcdf'].prefix))
+
+        if "+conduit" in spec:
+            cmake_args.append("-DENABLE_CONDUIT_PLUGIN=ON")
+            cmake_args.append("-DWITH_CONDUIT_PREFIX={0}"
+                              .format(spec['conduit'].prefix))
 
         return cmake_args
