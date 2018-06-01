@@ -23,7 +23,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 ##############################################################################
 from spack import *
-
+import os
 
 class Macsio(CMakePackage):
     """A Multi-purpose, Application-Centric, Scalable I/O Proxy Application
@@ -55,15 +55,42 @@ class Macsio(CMakePackage):
 
     depends_on('json-cwx')
     depends_on('mpi', when="+mpi")
-    depends_on('silo', when="+silo")
-    depends_on('hdf5', when="+hdf5")
-    # depends_on('hdf5+szip', when="+szip")
+
+    # Build hdf5, selecting for mpi.
+    # * Do we need to cross with szip and zlib too?
+    # * Had to add hl for adios.
+    depends_on('hdf5+hl+mpi', when="+hdf5+mpi")
+    depends_on('hdf5+hl~mpi', when="+hdf5~mpi")
+
+    # Silo always wants to be built with HDF5 under spack. Select for mpi.
+    depends_on('silo~fortran+mpi', when="+silo+mpi")
+    depends_on('silo~fortran~mpi', when="+silo~mpi")
+    # pdb is packaged with silo so do the same thing as for Silo
+    depends_on('silo~fortran+mpi', when="+pdb+mpi")
+    depends_on('silo~fortran~mpi', when="+pdb~mpi")
+
     depends_on('exodusii', when="+exodus")
-    # pdb is packaged with silo
-    depends_on('silo', when="+pdb")
     depends_on('typhonio', when="+typhonio")
     depends_on('scr', when="+scr")
-    depends_on('conduit', when="+conduit")
+    depends_on('szip', when="+szip")
+    depends_on('zlib', when="+zlib")
+
+    # Build conduit.
+    # * I don't care if conduit has Python except that it won't build on Mac
+    #   due to NumPy/OpenBLAS fortran compiler requirements.
+    # * It seems that I'm somewhat overspecifying in order to get some
+    #   multilevel variants to play together. I have to force adios to get it.
+#    depends_on('conduit', when="+conduit")
+    depends_on('conduit@brad~python+mpi+hdf5+silo+adios', when="+conduit+mpi+hdf5+silo")
+    depends_on('conduit@brad~python+mpi+hdf5~silo+adios', when="+conduit+mpi+hdf5~silo")
+    depends_on('conduit@brad~python+mpi~hdf5+silo+adios', when="+conduit+mpi~hdf5+silo")
+    depends_on('conduit@brad~python+mpi~hdf5~silo+adios', when="+conduit+mpi~hdf5~silo")
+    depends_on('conduit@brad~python~mpi+hdf5+silo+adios', when="+conduit~mpi+hdf5+silo")
+    depends_on('conduit@brad~python~mpi+hdf5~silo+adios', when="+conduit~mpi+hdf5~silo")
+    depends_on('conduit@brad~python~mpi~hdf5+silo+adios', when="+conduit~mpi~hdf5+silo")
+    depends_on('conduit@brad~python~mpi~hdf5~silo+adios', when="+conduit~mpi~hdf5~silo")
+    # ADIOS forces this. This seems to resolve it.
+    depends_on('libtool@:2.4.2', type='build')
 
     def cmake_args(self):
         spec = self.spec
@@ -96,15 +123,15 @@ class Macsio(CMakePackage):
             #         .format(spec['silo'].prefix))
         # SZIP is an hdf5 spack variant
         if "+szip" in spec:
-            cmake_args.append("-DENABLE_HDF5_SZIP")
+            cmake_args.append("-DENABLE_HDF5_SZIP=ON")
             cmake_args.append("-DWITH_SZIP_PREFIX={0}"
-                 .format(spec['SZIP'].prefix))
+                 .format(spec['szip'].prefix))
 
         # ZLIB is on by default, @1.1.2
         if "+zlib" in spec:
-            cmake_args.append("-DENABLE_HDF5_ZLIB")
+            cmake_args.append("-DENABLE_HDF5_ZLIB=ON")
             cmake_args.append("-DWITH_ZLIB_PREFIX={0}"
-                 .format(spec['silo'].prefix))
+                 .format(spec['zlib'].prefix))
 
         if "+typhonio" in spec:
             cmake_args.append("-DENABLE_TYPHONIO_PLUGIN=ON")
@@ -123,5 +150,8 @@ class Macsio(CMakePackage):
             cmake_args.append("-DENABLE_CONDUIT_PLUGIN=ON")
             cmake_args.append("-DWITH_CONDUIT_PREFIX={0}"
                               .format(spec['conduit'].prefix))
+
+        #print(os.listdir("."))
+        cmake_args.append(os.path.abspath(os.curdir))
 
         return cmake_args

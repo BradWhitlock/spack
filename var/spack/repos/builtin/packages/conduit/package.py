@@ -23,13 +23,11 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 ##############################################################################
 from spack import *
-
-import socket
 import os
+import socket
 
 import llnl.util.tty as tty
 from os import environ as env
-
 
 def cmake_cache_entry(name, value):
     """
@@ -38,8 +36,7 @@ def cmake_cache_entry(name, value):
     """
     return 'set({0} "{1}" CACHE PATH "")\n\n'.format(name, value)
 
-
-class Conduit(Package):
+class Conduit(CMakePackage):
     """Conduit is an open source project from Lawrence Livermore National
     Laboratory that provides an intuitive model for describing hierarchical
     scientific data in C++, C, Fortran, and Python. It is used for data
@@ -79,6 +76,7 @@ class Conduit(Package):
     variant("mpi", default=True, description="Build Conduit MPI Support")
     variant("hdf5", default=True, description="Build Conduit HDF5 support")
     variant("silo", default=False, description="Build Conduit Silo support")
+    variant("adios", default=False, description="Build Conduit ADIOS support")
 
     # variants for dev-tools (docs, etc)
     variant("doc", default=False, description="Build Conduit's documentation")
@@ -91,19 +89,18 @@ class Conduit(Package):
     ###########################################################################
 
     #######################
-    # CMake
-    #######################
-    # cmake 3.8.2 or newer
-    depends_on("cmake@3.8.2:", when="+cmake")
-
-    #######################
     # Python
     #######################
     # we need a shared version of python b/c linking with static python lib
     # causes duplicate state issues when running compiled python modules.
-    depends_on("python+shared")
+    depends_on("python+shared", when="+python")
     extends("python", when="+python")
     depends_on("py-numpy", when="+python", type=('build', 'run'))
+
+    #######################
+    # MPI
+    #######################
+    depends_on("mpi", when="+mpi")
 
     #######################
     # I/O Packages
@@ -111,22 +108,35 @@ class Conduit(Package):
     # TODO: cxx variant is disabled due to build issue Cyrus
     # experienced on BGQ. When on, the static build tries
     # to link against shared libs.
-    #
-    # Use HDF5 1.8, for wider output compatibly
-    # variants reflect we are not using hdf5's mpi or fortran features.
-#    depends_on("hdf5@1.8.19:1.8.999~cxx~mpi~fortran", when="+hdf5+shared")
-#    depends_on("hdf5@1.8.19:1.8.999~shared~cxx~mpi~fortran", when="+hdf5~shared")
-    depends_on("hdf5~cxx~fortran", when="+hdf5+shared")
-    depends_on("hdf5~cxx~shared~fortran", when="+hdf5~shared")
 
-    # we are not using silo's fortran features
-    depends_on("silo~fortran", when="+silo+shared")
-    depends_on("silo~shared~fortran", when="+silo~shared")
+    # NOTE: removed HDF5 1.8 version requirement as it is too restrictive.
+    # Cover mpi*shared variants.
+    depends_on("hdf5~cxx~fortran+mpi+shared", when="+hdf5+mpi+shared")
+    depends_on("hdf5~cxx~fortran+mpi~shared", when="+hdf5+mpi~shared")
+    depends_on("hdf5~cxx~fortran~mpi+shared", when="+hdf5~mpi+shared")
+    depends_on("hdf5~cxx~fortran~mpi~shared", when="+hdf5~mpi~shared")
 
-    #######################
-    # MPI
-    #######################
-    depends_on("mpi", when="+mpi")
+    # we are not using silo's fortran features. Silo always wants to be
+    # built with HDF5. Cover mpi*shared variants.
+    depends_on("silo~fortran+mpi+shared", when="+silo+mpi+shared")
+    depends_on("silo~fortran+mpi~shared", when="+silo+mpi~shared")
+    depends_on("silo~fortran~mpi+shared", when="+silo~mpi+shared")
+    depends_on("silo~fortran~mpi~shared", when="+silo~mpi~shared")
+
+    # Cover ADIOS dependencies and the mpi*hdf5*shared variants.
+    # NOTE: +hdf5~mpi is not allowed for ADIOS.
+    depends_on("adios+mpi+hdf5+shared", when="+adios+mpi+hdf5+shared")
+    depends_on("adios+mpi+hdf5~shared", when="+adios+mpi+hdf5~shared")
+    depends_on("adios+mpi~hdf5+shared", when="+adios+mpi~hdf5+shared")
+    depends_on("adios+mpi~hdf5~shared", when="+adios+mpi~hdf5~shared")
+    #depends_on("adios~mpi+hdf5+shared", when="+adios~mpi+hdf5+shared")
+    #depends_on("adios~mpi+hdf5~shared", when="+adios~mpi+hdf5~shared")
+    depends_on("adios~mpi~hdf5+shared", when="+adios~mpi~hdf5+shared")
+    depends_on("adios~mpi~hdf5~shared", when="+adios~mpi~hdf5~shared")
+# I'd like to have this line but openblas, required by numpy won't build without
+# a Fortran compiler. Passing ~python on Mac removes the fortran compiler
+# requirement.
+#    conflicts("+adios", when='~python')
 
     #######################
     # Documentation related
@@ -151,10 +161,9 @@ class Conduit(Package):
             return "https://github.com/LLNL/conduit/releases/download/v{0}/conduit-v{1}-src-with-blt.tar.gz".format(v, v)
         return url
 
-    def install(self, spec, prefix):
-        """
-        Build and install Conduit.
-        """
+    def cmake_args(self):
+        spec = self.spec
+        args = []
         with working_dir('spack-build', create=True):
             py_site_pkgs_dir = None
             if "+python" in spec:
@@ -163,22 +172,19 @@ class Conduit(Package):
             host_cfg_fname = self.create_host_config(spec,
                                                      prefix,
                                                      py_site_pkgs_dir)
-            cmake_args = []
+            args = []
             # if we have a static build, we need to avoid any of
             # spack's default cmake settings related to rpaths
             # (see: https://github.com/spack/spack/issues/2658)
-            if "+shared" in spec:
-                cmake_args.extend(std_cmake_args)
-            else:
-                for arg in std_cmake_args:
-                    if arg.count("RPATH") == 0:
-                        cmake_args.append(arg)
-            cmake_args.extend(["-C", host_cfg_fname, "../src"])
-            cmake(*cmake_args)
-            make()
-            make("install")
-            # install copy of host config for provenance
-            install(host_cfg_fname, prefix)
+# NOTE: std_args not available in CMakePackage?
+#            if "+shared" in spec:
+#                args.extend(std_args)
+#            else:
+#                for arg in std_args:
+#                    if arg.count("RPATH") == 0:
+#                        args.append(arg)
+            args.extend(["-C", host_cfg_fname, "../src"])
+        return args
 
     def create_host_config(self, spec, prefix, py_site_pkgs_dir=None):
         """
