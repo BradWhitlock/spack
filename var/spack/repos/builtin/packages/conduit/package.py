@@ -125,14 +125,15 @@ class Conduit(CMakePackage):
 
     # Cover ADIOS dependencies and the mpi*hdf5*shared variants.
     # NOTE: +hdf5~mpi is not allowed for ADIOS.
+    # * Turn off blosc for adios when building ~shared because blosc fails to build then.
     depends_on("adios+mpi+hdf5+shared", when="+adios+mpi+hdf5+shared")
-    depends_on("adios+mpi+hdf5~shared", when="+adios+mpi+hdf5~shared")
+    depends_on("adios+mpi+hdf5~shared~blosc", when="+adios+mpi+hdf5~shared")
     depends_on("adios+mpi~hdf5+shared", when="+adios+mpi~hdf5+shared")
-    depends_on("adios+mpi~hdf5~shared", when="+adios+mpi~hdf5~shared")
+    depends_on("adios+mpi~hdf5~shared~blosc", when="+adios+mpi~hdf5~shared")
     #depends_on("adios~mpi+hdf5+shared", when="+adios~mpi+hdf5+shared")
     #depends_on("adios~mpi+hdf5~shared", when="+adios~mpi+hdf5~shared")
     depends_on("adios~mpi~hdf5+shared", when="+adios~mpi~hdf5+shared")
-    depends_on("adios~mpi~hdf5~shared", when="+adios~mpi~hdf5~shared")
+    depends_on("adios~mpi~hdf5~shared~blosc", when="+adios~mpi~hdf5~shared")
 # I'd like to have this line but openblas, required by numpy won't build without
 # a Fortran compiler. Passing ~python on Mac removes the fortran compiler
 # requirement.
@@ -362,6 +363,17 @@ class Conduit(CMakePackage):
             cfg.write(cmake_cache_entry("SILO_DIR", spec['silo'].prefix))
         else:
             cfg.write("# silo not built by spack \n")
+
+        #######################
+        # ADIOS
+        #######################
+
+        cfg.write("# ADIOS from spack \n")
+
+        if "+adios" in spec:
+            cfg.write(cmake_cache_entry("ADIOS_DIR", spec['adios'].prefix))
+        else:
+            cfg.write("# adios not built by spack \n")
 
         cfg.write("##################################\n")
         cfg.write("# end spack generated host-config\n")
