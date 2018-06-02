@@ -59,15 +59,15 @@ class Macsio(CMakePackage):
     # Build hdf5, selecting for mpi.
     # * Do we need to cross with szip and zlib too?
     # * Had to add hl for adios.
-    depends_on('hdf5+hl+mpi', when="+hdf5+mpi")
-    depends_on('hdf5+hl~mpi', when="+hdf5~mpi")
+    depends_on('hdf5+hl+mpi~shared', when="+hdf5+mpi")
+    depends_on('hdf5+hl~mpi~shared', when="+hdf5~mpi")
 
     # Silo always wants to be built with HDF5 under spack. Select for mpi.
-    depends_on('silo~fortran+mpi', when="+silo+mpi")
-    depends_on('silo~fortran~mpi', when="+silo~mpi")
+    depends_on('silo~fortran+mpi~shared', when="+silo+mpi")
+    depends_on('silo~fortran~mpi~shared', when="+silo~mpi")
     # pdb is packaged with silo so do the same thing as for Silo
-    depends_on('silo~fortran+mpi', when="+pdb+mpi")
-    depends_on('silo~fortran~mpi', when="+pdb~mpi")
+    depends_on('silo~fortran+mpi~shared', when="+pdb+mpi")
+    depends_on('silo~fortran~mpi~shared', when="+pdb~mpi")
 
     depends_on('exodusii', when="+exodus")
     depends_on('typhonio', when="+typhonio")
@@ -81,14 +81,14 @@ class Macsio(CMakePackage):
     # * It seems that I'm somewhat overspecifying in order to get some
     #   multilevel variants to play together. I have to force adios to get it.
 #    depends_on('conduit', when="+conduit")
-    depends_on('conduit@brad~python+mpi+hdf5+silo+adios', when="+conduit+mpi+hdf5+silo")
-    depends_on('conduit@brad~python+mpi+hdf5~silo+adios', when="+conduit+mpi+hdf5~silo")
-    depends_on('conduit@brad~python+mpi~hdf5+silo+adios', when="+conduit+mpi~hdf5+silo")
-    depends_on('conduit@brad~python+mpi~hdf5~silo+adios', when="+conduit+mpi~hdf5~silo")
-    depends_on('conduit@brad~python~mpi+hdf5+silo+adios', when="+conduit~mpi+hdf5+silo")
-    depends_on('conduit@brad~python~mpi+hdf5~silo+adios', when="+conduit~mpi+hdf5~silo")
-    depends_on('conduit@brad~python~mpi~hdf5+silo+adios', when="+conduit~mpi~hdf5+silo")
-    depends_on('conduit@brad~python~mpi~hdf5~silo+adios', when="+conduit~mpi~hdf5~silo")
+    depends_on('conduit@brad~python+mpi+hdf5+silo+adios~shared', when="+conduit+mpi+hdf5+silo")
+    depends_on('conduit@brad~python+mpi+hdf5~silo+adios~shared', when="+conduit+mpi+hdf5~silo")
+    depends_on('conduit@brad~python+mpi~hdf5+silo+adios~shared', when="+conduit+mpi~hdf5+silo")
+    depends_on('conduit@brad~python+mpi~hdf5~silo+adios~shared', when="+conduit+mpi~hdf5~silo")
+    depends_on('conduit@brad~python~mpi+hdf5+silo+adios~shared', when="+conduit~mpi+hdf5+silo")
+    depends_on('conduit@brad~python~mpi+hdf5~silo+adios~shared', when="+conduit~mpi+hdf5~silo")
+    depends_on('conduit@brad~python~mpi~hdf5+silo+adios~shared', when="+conduit~mpi~hdf5+silo")
+    depends_on('conduit@brad~python~mpi~hdf5~silo+adios~shared', when="+conduit~mpi~hdf5~silo")
     # ADIOS forces this. This seems to resolve it.
     depends_on('libtool@:2.4.2', type='build')
 
