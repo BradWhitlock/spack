@@ -42,9 +42,12 @@ class CBlosc(CMakePackage):
     version('1.8.0',  '5b92ecb287695ba20cc33d30bf221c4f')
 
     variant('avx2', default=True, description='Enable AVX2 support')
+    variant('shared', default=True,
+            description='Build shared versions of the library')
 
     depends_on('cmake@2.8.10:', type='build')
-    depends_on('snappy')
+    depends_on('snappy', when="+shared")
+    depends_on('snappy~shared', when="~shared")
     depends_on('zlib')
     depends_on('zstd')
     depends_on('lz4')
@@ -56,6 +59,13 @@ class CBlosc(CMakePackage):
             args.append('-DDEACTIVATE_AVX2=OFF')
         else:
             args.append('-DDEACTIVATE_AVX2=ON')
+
+        # NOTE: even with this, there are some blosc programs that fail to
+        #       link due to what appears to be a C++ dependency in snappy.
+        if '~shared' in self.spec:
+            args.append("-DBUILD_SHARED_LIBS:BOOL=OFF")
+        else:
+            args.append("-DBUILD_SHARED_LIBS:BOOL=ON")
 
         if self.spec.satisfies('@1.12.0:'):
             args.append('-DPREFER_EXTERNAL_SNAPPY=ON')
