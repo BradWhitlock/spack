@@ -167,9 +167,11 @@ class Conduit(CMakePackage):
         args = []
         with working_dir('spack-build', create=True):
             py_site_pkgs_dir = None
-            if "+python" in spec:
-                py_site_pkgs_dir = site_packages_dir
-
+            try: # FOR NOW
+                if "+python" in spec:
+                    py_site_pkgs_dir = site_packages_dir
+            except: # FOR NOW
+                py_site_pkgs_dir = None # FOR NOW
             host_cfg_fname = self.create_host_config(spec,
                                                      prefix,
                                                      py_site_pkgs_dir)
