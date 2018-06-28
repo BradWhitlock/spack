@@ -170,7 +170,7 @@ class Conduit(CMakePackage):
             py_site_pkgs_dir = None
             try: # FOR NOW
                 if "+python" in spec:
-                    py_site_pkgs_dir = site_packages_dir
+                    py_site_pkgs_dir = spec['python'].package.site_packages_dir
             except: # FOR NOW
                 py_site_pkgs_dir = None # FOR NOW
             host_cfg_fname = self.create_host_config(spec,
