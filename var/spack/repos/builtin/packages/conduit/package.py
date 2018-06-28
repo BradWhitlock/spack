@@ -164,6 +164,7 @@ class Conduit(CMakePackage):
 
     def cmake_args(self):
         spec = self.spec
+        prefix = self.prefix # FIX
         args = []
         with working_dir('spack-build', create=True):
             py_site_pkgs_dir = None
