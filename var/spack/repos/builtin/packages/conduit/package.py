@@ -111,8 +111,19 @@ class Conduit(CMakePackage):
 
     # NOTE: removed HDF5 1.8 version requirement as it is too restrictive.
     # Cover mpi*shared variants.
-    depends_on("hdf5~cxx~fortran+mpi+shared", when="+hdf5+mpi+shared")
-    depends_on("hdf5~cxx~fortran+mpi~shared", when="+hdf5+mpi~shared")
+    # UPDATE: For Conduit+ADIOS library build, it turns out that parallel
+    #         hdf5 is not appropriate for serial relay library. The tests
+    #         fail because MPI_Init wasn't called in serial. Makes sense.
+    #         We have to force a serial HDF5 library for Conduit for now.
+    #         The fix would be to make Conduit's CMake build detect separate
+    #         serial vs parallel HDF5 libraries and make the right parts
+    #         of relay use the right HDF5 versions.
+    ###depends_on("hdf5~cxx~fortran+mpi+shared", when="+hdf5+mpi+shared")
+    ###depends_on("hdf5~cxx~fortran+mpi~shared", when="+hdf5+mpi~shared")
+    ###depends_on("hdf5~cxx~fortran~mpi+shared", when="+hdf5~mpi+shared")
+    ###depends_on("hdf5~cxx~fortran~mpi~shared", when="+hdf5~mpi~shared")
+    depends_on("hdf5~cxx~fortran~mpi+shared", when="+hdf5+mpi+shared")
+    depends_on("hdf5~cxx~fortran~mpi~shared", when="+hdf5+mpi~shared")
     depends_on("hdf5~cxx~fortran~mpi+shared", when="+hdf5~mpi+shared")
     depends_on("hdf5~cxx~fortran~mpi~shared", when="+hdf5~mpi~shared")
 
@@ -126,18 +137,24 @@ class Conduit(CMakePackage):
     # Cover ADIOS dependencies and the mpi*hdf5*shared variants.
     # NOTE: +hdf5~mpi is not allowed for ADIOS.
     # * Turn off blosc for adios when building ~shared because blosc fails to build then.
-    depends_on("adios+mpi+hdf5+shared", when="+adios+mpi+hdf5+shared")
-    depends_on("adios+mpi+hdf5~shared~blosc", when="+adios+mpi+hdf5~shared")
-    depends_on("adios+mpi~hdf5+shared", when="+adios+mpi~hdf5+shared")
-    depends_on("adios+mpi~hdf5~shared~blosc", when="+adios+mpi~hdf5~shared")
-    #depends_on("adios~mpi+hdf5+shared", when="+adios~mpi+hdf5+shared")
-    #depends_on("adios~mpi+hdf5~shared", when="+adios~mpi+hdf5~shared")
-    depends_on("adios~mpi~hdf5+shared", when="+adios~mpi~hdf5+shared")
-    depends_on("adios~mpi~hdf5~shared~blosc", when="+adios~mpi~hdf5~shared")
-# I'd like to have this line but openblas, required by numpy won't build without
-# a Fortran compiler. Passing ~python on Mac removes the fortran compiler
-# requirement.
-#    conflicts("+adios", when='~python')
+    # NOTE: This section works but it is turned off for now due to relay/parallel
+    #       HDF5 incompatibility.
+    ###depends_on("adios+mpi+hdf5+shared", when="+adios+mpi+hdf5+shared")
+    ###depends_on("adios+mpi+hdf5~shared~blosc", when="+adios+mpi+hdf5~shared")
+    ###depends_on("adios+mpi~hdf5+shared", when="+adios+mpi~hdf5+shared")
+    ###depends_on("adios+mpi~hdf5~shared~blosc", when="+adios+mpi~hdf5~shared")
+    ####depends_on("adios~mpi+hdf5+shared", when="+adios~mpi+hdf5+shared")
+    ####depends_on("adios~mpi+hdf5~shared", when="+adios~mpi+hdf5~shared")
+    ###depends_on("adios~mpi~hdf5+shared", when="+adios~mpi~hdf5+shared")
+    ###depends_on("adios~mpi~hdf5~shared~blosc", when="+adios~mpi~hdf5~shared")
+
+    # NOTE: We want to force an ADIOS build that can be serial or parallel
+    #       but turn off HDF5 support since that has to be parallel.
+    depends_on("adios+mpi~hdf5+shared",       when="+adios+mpi+shared")
+    depends_on("adios+mpi~hdf5~shared~blosc", when="+adios+mpi~shared")
+    depends_on("adios~mpi~hdf5+shared",       when="+adios~mpi+shared")
+    depends_on("adios~mpi~hdf5~shared~blosc", when="+adios~mpi~shared")
+
 
     #######################
     # Documentation related

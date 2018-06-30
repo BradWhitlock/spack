@@ -106,12 +106,13 @@ class Adios(AutotoolsPackage):
     depends_on('c-blosc@1.12.0:', when='+blosc+shared')
     depends_on('c-blosc@1.12.0:~shared', when='+blosc~shared')
     # optional transports & file converters
-    depends_on('hdf5@1.8:+hl+mpi', when='+hdf5')
+    depends_on('hdf5@1.8:+hl+mpi', when='+hdf5+mpi')
+    depends_on('hdf5@1.8:+hl~mpi', when='+hdf5~mpi')
     depends_on('netcdf', when='+netcdf')
     depends_on('libevpath', when='staging=flexpath')
     depends_on('dataspaces+mpi', when='staging=dataspaces')
 
-    for p in ['+hdf5', '+netcdf', 'staging=flexpath', 'staging=dataspaces']:
+    for p in ['+netcdf', 'staging=flexpath', 'staging=dataspaces']:
         conflicts(p, when='~mpi')
 
     build_directory = 'spack-build'
